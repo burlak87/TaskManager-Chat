@@ -2,6 +2,43 @@
 
 echo "# This directory is intentionally left empty" > backend/internal/auth/README.md
 
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node.js
+frontend/node_modules/
+frontend/.nuxt/
+frontend/.output/
+frontend/.cache/
+frontend/dist/
+*.log
+npm-debug.log*
+
+# Go
+backend/bin/
+backend/vendor/
+*.test
+*.exe
+*.prof
+
+# Docker
+.env
+*.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+
 # If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
