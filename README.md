@@ -80,22 +80,3 @@ go mod tidy (если бэкенд)
 git push origin ваша-ветка
 # Проверить CI пайплайн на GitHub
 ```
-
-# Список всех веток для команды
-branches=(
-  "feature/auth"          # FE-1 + BE-1
-  "feature/kanban"        # FE-2 + BE-2
-  "feature/chat"         # FE-3 + BE-3
-  "feature/notifications" # FE-4 + BE-4
-  "feature/ui-polish"    # FE-5
-  "feature/initial-setup" # Для инициализации проекта
-)
-
-# Создаём и переключаемся на каждую ветку
-for branch in "${branches[@]}"; do
-  git checkout -b "$branch"
-  git push -u origin "$branch"
-done
-
-# Возвращаемся на main
-git checkout main
