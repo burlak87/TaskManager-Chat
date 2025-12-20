@@ -39,5 +39,31 @@ func (s *Storage) SelectUsers(email string) (domain.User, error) {
 	
 	return domain.User{
 		ID: user.ID,
+		Username: user.Username,
+		Firstname: user.Firstname,
+		Lastname: user.Lastname,
+		Email: user.Email,
+		PasswordHash: user.PasswordHash,
+		TwoFAEnabled: user.TwoFAEnabled,
+		CreatedAt: user.CreatedAt,
 	}, nil
 }
+
+func (s *Storage) SelectUsersByID(id int64) (domain.User, error) {
+	user, err := s.queries.GetUserByID(context.Background(), id)
+	if err != nil {
+		return domain.User{}, nil
+	}
+	
+	return domain.User{
+		ID: user.ID,
+		Username: user.Username,
+		Firstname: user.Firstname,
+		Lastname: user.Lastname,
+		Email: user.Email,
+		PasswordHash: user.PasswordHash,
+		TwoFAEnabled: user.TwoFAEnabled,
+		CreatedAt: user.CreatedAt,
+	}, nil
+}
+
