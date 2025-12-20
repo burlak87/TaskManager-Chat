@@ -6,7 +6,45 @@ import (
 	"github.com/your-team/taskmanager-chat/backend/pkg/logging"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/gin-gonic/gin"
+    "github.com/spf13/viper"
 )
+
+// config/config.go
+// package config
+
+// import (
+//     "github.com/gin-gonic/gin"
+//     "github.com/spf13/viper"
+// )
+
+// type Config struct {
+//     Port     string
+//     GinMode  string
+//     Database DatabaseConfig
+// }
+
+// func Load() *Config {
+//     // Загрузка конфигурации
+//     return &Config{
+//         Port:    viper.GetString("PORT"),
+//         GinMode: viper.GetString("GIN_MODE"),
+//     }
+// }
+
+// func SetupRouter(config *Config) *gin.Engine {
+//     if config.GinMode == "release" {
+//         gin.SetMode(gin.ReleaseMode)
+//     }
+    
+//     r := gin.New()
+    
+//     // Глобальные middleware
+//     r.Use(gin.Logger())
+//     r.Use(gin.Recovery())
+    
+//     return r
+// }
 
 type Config struct {
 	Env           string `yml:"env" env-default:"development"`
