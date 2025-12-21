@@ -1,4 +1,7 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24.6-alpine AS builder
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
+    && apk add --no-cache ca-certificates tzdata upx
 
 WORKDIR /app
 
@@ -7,16 +10,24 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o main ./cmd/server
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /server ./cmd/app
 
-FROM alpine:latest
+RUN upx --best --lzma /server
 
-RUN apk --no-cache add ca-certificates
+RUN mkdir -p /tmp && chown appuser:appgroup /tmp
 
-WORKDIR /app
+FROM scratch
 
-COPY --from=builder /app/main .
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder --chown=appuser:appgroup --chmod=755 /server /server
+COPY --from=builder /app/config.yaml /config.yaml
+COPY --from=builder --chown=appuser:appgroup /tmp /tmp
+
+USER appuser
 
 EXPOSE 8080
 
-CMD ["./main"]
+CMD ["/server"]
