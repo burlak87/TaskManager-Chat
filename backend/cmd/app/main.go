@@ -7,11 +7,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/your-team/taskmanager-chat/backend/internal/adapters/rest"
 	"github.com/your-team/taskmanager-chat/backend/internal/service"
+	mongodbstorage "github.com/your-team/taskmanager-chat/backend/internal/storage/mongodb"
 	"github.com/your-team/taskmanager-chat/backend/internal/storage/psql"
-	"github.com/your-team/taskmanager-chat/backend/pkg/client-database/postgresql"
+	"github.com/your-team/taskmanager-chat/backend/internal/websocket"
+	mongodbclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/mongodb"
+	postgresqlclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/postgresql"
 	"github.com/your-team/taskmanager-chat/backend/pkg/client/postgresql"
 	"github.com/your-team/taskmanager-chat/backend/pkg/config"
 	"github.com/your-team/taskmanager-chat/backend/pkg/logging"
+	"github.com/your-team/taskmanager-chat/backend/pkg/middleware"
 	"github.com/your-team/taskmanager-chat/backend/pkg/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,7 +36,7 @@ func main() {
 	logger.Infof("Environment: %s", cfg.Env)
 	logger.Infof("DB CONFIG: Host=%s, Port=%s, Database=%s, Username=%s", cfg.Host, cfg.Port, cfg.Database, cfg.Username)
 	
-	postgresqSQLClient, err := postgresql.NewClient(context.TODO(), 15, cfg.StorageConfig)
+	postgresqSQLClient, err := postgresqlclient.NewClient(context.TODO(), 15, cfg.StorageConfig)
 	if err != nil {
 		logger.Fatlg("Failed to connect to database: %v", err)
 	}
@@ -41,12 +45,25 @@ func main() {
 	queries := sqlc.New(pgPool)
 	storage := psql.NewStorage(queries)
 	
+	mongoClient, err := mongodbclient.NewClient(context.TODO(), 15, cfg.MongoConfig)
+	if err != nil {
+		logger.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+	defer mongoClient.Disconnect(context.TODO())
+	
+	messageStorage := mongodbstorage.NewMessageStorage(mongoClient, cfg.MongoConfig.Database)
+	
 	jwtSecret := "my-secret-key"
 	logger.Infof("secret %s", jwtSecret)	
 	
 	userService := service.NewUser(storage, storage, jwtSecret)
 
 	userHandler := rest.NewUsersHandler(userService, logger)
+	
+	wsHub := websocket.NewHub(messageStorage, logger.Logger)
+	go wsHub.Run()
+	
+	wsHandler := websocket.NewHandler(wsHub, logger.Logger)
 
 	serverCfg := server.Config{
 		Port:         "8888",
@@ -64,6 +81,12 @@ func main() {
 		{
 			auth := api.Group("/auth")
 			userHandler.RegisterRoutes(auth, jwtSecret)
+			
+			ws := api.Group("/ws")
+			ws.Use(middleware.JWTAuthMiddleware(jwtSecret))
+			{
+				ws.GET("/chat", wsHandler.HandleWebSocket)
+			}
 		}
 		
 		engine.GET("/health", func(c *gin.Context) {
