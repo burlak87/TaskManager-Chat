@@ -64,8 +64,8 @@ func (s *Storage) SelectUsers(email string) (domain.User, error) {
 	}, nil
 }
 
-func (s *Storage) SelectUsersByID(id int64) (domain.User, error) {
-	user, err := s.queries.GetuserByID(context.Background(), id)
+func (s *Storage) SelectUserByID(id int64) (domain.User, error) {
+	user, err := s.queries.GetUserByID(context.Background(), id)
 	if err != nil {
 		return domain.User{}, nil
 	}

@@ -250,7 +250,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 	return i, err
 }
 
-const getuserByID = `-- name: GetuserByID :one
+const getUserByID = `-- name: GetUserByID :one
 SELECT 
     id,
     username,
@@ -267,7 +267,7 @@ WHERE id = $1
 LIMIT 1
 `
 
-type GetuserByIDRow struct {
+type GetUserByIDRow struct {
 	ID             int64              `json:"id"`
 	Username       string             `json:"username"`
 	Firstname      string             `json:"firstname"`
@@ -280,9 +280,9 @@ type GetuserByIDRow struct {
 	FailedAttempts pgtype.Int4        `json:"failed_attempts"`
 }
 
-func (q *Queries) GetuserByID(ctx context.Context, id int64) (GetuserByIDRow, error) {
-	row := q.db.QueryRow(ctx, getuserByID, id)
-	var i GetuserByIDRow
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Username,

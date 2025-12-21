@@ -26,7 +26,7 @@ type Querier interface {
 	GetRefreshToken(ctx context.Context, token string) (GetRefreshTokenRow, error)
 	GetTwoFaCodeByUserID(ctx context.Context, userID int64) (TwoFaCode, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
-	GetuserByID(ctx context.Context, id int64) (GetuserByIDRow, error)
+	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	MarkTwoFaCodeAsUsed(ctx context.Context, id int64) error
 	RefreshDeleteByUserI(ctx context.Context, userID int64) error
 	RefreshDeleteByUserID(ctx context.Context, userID int64) error

@@ -26,7 +26,7 @@ FROM users
 WHERE email = $1 
 LIMIT 1;
 
--- name: GetuserByID :one
+-- name: GetUserByID :one
 SELECT 
     id,
     username,
