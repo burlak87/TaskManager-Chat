@@ -1,8 +1,8 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
+  db:
+    image: postgres:latest
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
