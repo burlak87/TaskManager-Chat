@@ -8,11 +8,10 @@ import (
 	"github.com/your-team/taskmanager-chat/backend/internal/adapters/rest"
 	"github.com/your-team/taskmanager-chat/backend/internal/service"
 	"github.com/your-team/taskmanager-chat/backend/internal/storage/psql"
-	"github.com/your-team/taskmanager-chat/backend/internal/storage/psql/sqlc"
-	"github.com/your-team/taskmanager-chat/backend/pkg/client/postqresql"
+	"github.com/your-team/taskmanager-chat/backend/pkg/client-database/postgresql"
+	"github.com/your-team/taskmanager-chat/backend/pkg/client/postgresql"
 	"github.com/your-team/taskmanager-chat/backend/pkg/config"
 	"github.com/your-team/taskmanager-chat/backend/pkg/logging"
-	"github.com/your-team/taskmanager-chat/backend/pkg/middleware"
 	"github.com/your-team/taskmanager-chat/backend/pkg/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,16 +32,11 @@ func main() {
 	logger.Infof("Environment: %s", cfg.Env)
 	logger.Infof("DB CONFIG: Host=%s, Port=%s, Database=%s, Username=%s", cfg.Host, cfg.Port, cfg.Database, cfg.Username)
 	
-	ctx := context.Background()
-	pgPool, err := pgxpool.New(ctx, getDSN(cfg))
+	postgresqSQLClient, err := postgresql.NewClient(context.TODO(), 15, cfg.StorageConfig)
 	if err != nil {
-		logger.Fatalf("Failed to create connection pool: %v", err)
+		logger.Fatlg("Failed to connect to database: %v", err)
 	}
-	defer pgPool.Close()
-	if err := pgPool.Ping(ctx); err != nil {
-		logger.Fatalf("Failed to ping database: %v", err)
-	}
-	logger.Infoln("Database connection established")
+	defer postgresqSQLClient.Close()
 	
 	queries := sqlc.New(pgPool)
 	storage := psql.NewStorage(queries)
