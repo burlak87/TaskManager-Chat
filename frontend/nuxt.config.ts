@@ -1,15 +1,38 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+import tailwindcss from "@tailwindcss/vite";
+
 export default defineNuxtConfig({
-  modules: ['@pinia/nuxt', '@vueuse/nuxt', '@nuxt/ui'],
+  ssr: false,
   devtools: { enabled: true },
-  css: ['../assets/css/main.css'],
-  postcss: {
-    plugins: {
-      '@tailwindcss/postcss': {},
-      autoprefixer: {},
-    },
+  modules: [
+    '@pinia/nuxt',
+    '@vueuse/nuxt',
+    'reka-ui/nuxt',
+    '@nuxtjs/i18n',
+  ],
+  css: [
+    '~/assets/css/main.css',
+  ],
+  vite: {
+    plugins: [
+      tailwindcss(),
+    ],
   },
-  ui: {
-    icons: ['lucide'],
+  i18n: {
+    defaultLocale: 'ru',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_redirected',
+      redirectOn: 'root',
+    },
+    langDir: 'locales/',
+    locales: [
+      {
+        code: 'ru',
+        file: 'ru.json',
+        iso: 'ru-RU',
+        name: 'Русский',
+      },
+    ],
+    strategy: 'prefix_except_default',
   },
 });
