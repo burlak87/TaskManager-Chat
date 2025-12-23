@@ -1,3 +1,4 @@
+Taskmanager+chat
 # Расприделение веток, участников и их задач.
 - В ветке feature/auth (Front(Александр) + Back(Федор))
 - В ветке feature/kanban (Front(Андрей) + Back(Даниил))
