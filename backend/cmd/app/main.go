@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,13 +14,13 @@ import (
 	"github.com/your-team/taskmanager-chat/backend/internal/websocket"
 	mongodbclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/mongodb"
 	postgresqlclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/postgresql"
-	"github.com/your-team/taskmanager-chat/backend/pkg/client/postgresql"
 	"github.com/your-team/taskmanager-chat/backend/pkg/config"
 	"github.com/your-team/taskmanager-chat/backend/pkg/logging"
 	"github.com/your-team/taskmanager-chat/backend/pkg/middleware"
 	"github.com/your-team/taskmanager-chat/backend/pkg/server"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	database "github.com/your-team/taskmanager-chat/backend/internal/storage/psql/sqlc"
+	"github.com/pressly/goose/v3"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
@@ -34,15 +36,36 @@ func main() {
 	
 	cfg := config.GetConfig()
 	logger.Infof("Environment: %s", cfg.Env)
-	logger.Infof("DB CONFIG: Host=%s, Port=%s, Database=%s, Username=%s", cfg.Host, cfg.Port, cfg.Database, cfg.Username)
-	
+	logger.Infof("DB CONFIG: Host=%s, Port=%s, Database=%s, Username=%s", cfg.StorageConfig.Host, cfg.StorageConfig.Port, cfg.StorageConfig.Database, cfg.StorageConfig.Username)
+
+	dbURL := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		cfg.StorageConfig.Username,
+		cfg.StorageConfig.Password,
+		cfg.StorageConfig.Host,
+		cfg.StorageConfig.Port,
+		cfg.StorageConfig.Database)
+
+	db, err := sql.Open("pgx", dbURL)
+	if err != nil {
+		logger.Fatalf("Failed to connect to database for migrations: %v", err)
+	}
+
+	if err := goose.SetDialect("postgres"); err != nil {
+    logger.Fatalf("Failed to set goose dialect: %v", err)
+    }
+
+	if err := goose.Up(db, "/app/migrations"); err != nil {
+		logger.Fatalf("Failed to run migrations: %v", err)
+	}
+	db.Close()
+
 	postgresqSQLClient, err := postgresqlclient.NewClient(context.TODO(), 15, cfg.StorageConfig)
 	if err != nil {
-		logger.Fatlg("Failed to connect to database: %v", err)
+		logger.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer postgresqSQLClient.Close()
-	
-	queries := sqlc.New(pgPool)
+
+	queries := database.New(postgresqSQLClient)
 	storage := psql.NewStorage(queries)
 	
 	mongoClient, err := mongodbclient.NewClient(context.TODO(), 15, cfg.MongoConfig)
@@ -56,7 +79,7 @@ func main() {
 	jwtSecret := "my-secret-key"
 	logger.Infof("secret %s", jwtSecret)	
 	
-	userService := service.NewUser(storage, storage, jwtSecret)
+	userService := service.NewUser(storage, jwtSecret)
 
 	userHandler := rest.NewUsersHandler(userService, logger)
 	
@@ -66,7 +89,7 @@ func main() {
 	wsHandler := websocket.NewHandler(wsHub, logger.Logger)
 
 	serverCfg := server.Config{
-		Port:         "8888",
+		Port:         "8080",
 		Mode:         cfg.Env,
 		CorsOrigins:  []string{"*"},
 		CorsEnabled:  true,
@@ -79,9 +102,8 @@ func main() {
 	srv.RegisterRoutes(func(engine *gin.Engine) {
 		api := engine.Group("/api")
 		{
-			auth := api.Group("/auth")
-			userHandler.RegisterRoutes(auth, jwtSecret)
-			
+			userHandler.RegisterRoutes(api, jwtSecret)
+
 			ws := api.Group("/ws")
 			ws.Use(middleware.JWTAuthMiddleware(jwtSecret))
 			{
@@ -103,7 +125,7 @@ func main() {
 }
 
 func getDSN(cfg *config.Config) string {
-	return "postgresql://" + cfg.Username + ":" + cfg.Password + "@" + cfg.Host + ":" + cfg.Port + "/" + cfg.Database + "?sslmode=disable&pool_max_conns=20"
+	return "postgresql://" + cfg.StorageConfig.Username + ":" + cfg.StorageConfig.Password + "@" + cfg.StorageConfig.Host + ":" + cfg.StorageConfig.Port + "/" + cfg.StorageConfig.Database + "?sslmode=disable&pool_max_conns=20"
 }
 	
 // postgreSQLClient, err := postgresql.NewClient(context.TODO(), 15, cfg.StorageConfig)

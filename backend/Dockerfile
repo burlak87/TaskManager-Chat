@@ -1,15 +1,13 @@
 FROM golang:1.24.6-alpine AS builder
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
-    && apk add --no-cache ca-certificates tzdata upx
+    && apk add --no-cache ca-certificates tzdata upx git
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
-
 COPY . .
 
+RUN go mod tidy
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /server ./cmd/app
 
 RUN upx --best --lzma /server
@@ -24,6 +22,7 @@ COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 COPY --from=builder --chown=appuser:appgroup --chmod=755 /server /server
 COPY --from=builder /app/config.yaml /config.yaml
+COPY --from=builder --chown=appuser:appgroup /app/migrations /app/migrations
 COPY --from=builder --chown=appuser:appgroup /tmp /tmp
 
 USER appuser

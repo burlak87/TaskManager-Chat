@@ -11,11 +11,12 @@ import { useAuthStore } from '~/stores/auth';
 const authStore = useAuthStore();
 
 onMounted(() => {
+  if (import.meta.client) {
     if (authStore.isAuthenticated) {
       navigateTo('/dashboard');
     } else {
       navigateTo('/auth/login');
     }
   }
-);
+});
 </script>

@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-team/taskmanager-chat/backend/internal/models"
+	"github.com/your-team/taskmanager-chat/backend/internal/domain"
 	"github.com/your-team/taskmanager-chat/backend/internal/service"
 )
 
@@ -20,8 +20,8 @@ func NewChatHandler(chatService *service.ChatService) *ChatHandler {
 }
 
 func (h *ChatHandler) GetMessages(c *gin.Context) {
-	boardID := c.Param("board_id")
-	if boardID == "" {
+	boardIDStr := c.Param("board_id")
+	if boardIDStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "board_id is required"})
 		return
 	}
@@ -33,7 +33,7 @@ func (h *ChatHandler) GetMessages(c *gin.Context) {
 		limit = 50
 	}
 
-	messages, err := h.chatService.GetMessages(c.Request.Context(), boardID, limit, offset)
+	messages, err := h.chatService.GetMessages(c.Request.Context(), boardIDStr, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -59,7 +59,7 @@ func (h *ChatHandler) GetMessageByID(c *gin.Context) {
 }
 
 func (h *ChatHandler) CreateMessage(c *gin.Context) {
-	var req models.MessageRequest
+	var req domain.MessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -77,12 +77,13 @@ func (h *ChatHandler) CreateMessage(c *gin.Context) {
 		return
 	}
 
-	message := &models.Message{
+	userIDInt64 := userID.(int64)
+
+	message := &domain.Message{
 		BoardID:  req.BoardID,
-		UserID:   userID.(string),
+		UserID:   userIDInt64,
 		Username: username.(string),
 		Content:  req.Content,
-		Mentions: req.Mentions,
 	}
 
 	response, err := h.chatService.SaveMessage(c.Request.Context(), message)
@@ -95,13 +96,13 @@ func (h *ChatHandler) CreateMessage(c *gin.Context) {
 }
 
 func (h *ChatHandler) GetMessagesCount(c *gin.Context) {
-	boardID := c.Param("board_id")
-	if boardID == "" {
+	boardIDStr := c.Param("board_id")
+	if boardIDStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "board_id is required"})
 		return
 	}
 
-	count, err := h.chatService.CountMessages(c.Request.Context(), boardID)
+	count, err := h.chatService.CountMessages(c.Request.Context(), boardIDStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

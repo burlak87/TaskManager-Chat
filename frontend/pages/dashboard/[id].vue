@@ -52,7 +52,7 @@
             <div class="text-gray-500 mt-1 truncate">{{ task.description }}</div>
             <div v-if="task.assignee" class="mt-2 flex items-center gap-1 text-xs text-gray-400">
               <div class="w-4 h-4 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold">
-                {{ task.assignee[0].toUpperCase() }}
+                {{ task.assignee?.[0]?.toUpperCase() }}
               </div>
               {{ task.assignee }}
             </div>
@@ -180,7 +180,7 @@ const tabClass = (tab: 'board' | 'chat') => [
 const connectWebSocket = () => {
   if (!boardId.value || !authStore.accessToken) return;
 
-  const wsUrl = `ws://localhost:8888/ws/chat?board_id=${boardId.value}`;
+  const wsUrl = `ws://localhost:8080/ws/chat?board_id=${boardId.value}`;
   socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {

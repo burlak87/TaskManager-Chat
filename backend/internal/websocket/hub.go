@@ -24,7 +24,6 @@ type Client struct {
 	userID   int64
 	username string
 	boardID  int64
-	mu       sync.Mutex
 }
 
 type Hub struct {
@@ -205,4 +204,3 @@ func (h *Hub) messageToJSON(msg domain.MessageResponse) []byte {
 	}
 	return jsonData
 }
-

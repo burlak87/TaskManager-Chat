@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { boardsApi } from '~/services/api';
+import { useNotificationStore } from '~/stores/notification';
 
 export interface Column {
   id: string;
@@ -34,10 +35,8 @@ export const useBoardStore = defineStore('board', {
     async fetchBoards() {
       this.loading = true;
       try {
-        this.boards = [
-          { id: '1', title: 'Backend MVP', description: 'API для чата и задач' },
-          { id: '2', title: 'Frontend Layout', description: 'Nuxt и Tailwind' },
-        ];
+        const response = await boardsApi.getBoards();
+        this.boards = response;
       } catch (e) {
         console.error('Error fetching boards:', e);
       } finally {
@@ -45,11 +44,11 @@ export const useBoardStore = defineStore('board', {
       }
     },
 
-    async createBoard(title: string) {
+    async createBoard(title: string, description?: string) {
       try {
-        const newBoard = { id: Date.now().toString(), title };
-        this.boards.push(newBoard);
-        return newBoard;
+        const response = await boardsApi.createBoard({ title, description });
+        this.boards.push(response);
+        return response;
       } catch (e) {
         console.error('Error creating board:', e);
         throw e;
@@ -59,11 +58,8 @@ export const useBoardStore = defineStore('board', {
     async fetchTasks(boardId: string) {
       this.loading = true;
       try {
-        this.tasks = [
-          { id: '1', title: 'Настроить Nuxt', description: 'Сделать шапку и роуты', status: 'done', assignee: 'Саня', createdAt: '2025-12-08' },
-          { id: '2', title: 'Сделать API', description: 'Аксис и интерцепторы', status: 'in-progress', assignee: 'Федор', createdAt: '2025-12-09' },
-          { id: '3', title: 'Драг-н-дроп', description: 'Реализовать перетаскивание', status: 'todo', assignee: 'Андрей', createdAt: '2025-12-10' },
-        ];
+        const response = await boardsApi.getTasks(boardId);
+        this.tasks = response;
       } catch (e) {
         console.error('Error fetching tasks:', e);
       } finally {
@@ -71,40 +67,46 @@ export const useBoardStore = defineStore('board', {
       }
     },
 
-    async addTask(task: Omit<Task, 'id'>) {
+    async addTask(task: Omit<Task, 'id'> & { boardId: string }) {
       try {
-        const newTask = { ...task, id: Date.now().toString() };
-        this.tasks.push(newTask);
-        
+        const { boardId, ...taskData } = task;
+        const response = await boardsApi.createTask(boardId, taskData);
+        this.tasks.push(response);
+
         const notifStore = useNotificationStore();
         notifStore.addNotification({
           type: 'info',
           message: `Задача "${task.title}" создана`
         });
-        
-        return newTask;
+
+        return response;
       } catch (e) {
         console.error('Error adding task:', e);
         throw e;
       }
     },
 
-    async updateTaskStatus(taskId: string, newStatus: string) {
-      const taskIndex = this.tasks.findIndex(t => t.id === taskId);
-      if (taskIndex !== -1) {
-        const oldStatus = this.tasks[taskIndex].status;
-        this.tasks[taskIndex].status = newStatus;
+    async updateTaskStatus(taskId: string, newStatus: string, boardId: string) {
+      try {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (!task) return;
 
-        try {
-          const notifStore = useNotificationStore();
-          notifStore.addNotification({
-            type: 'success',
-            message: `Задача перемещена в ${newStatus}`
-          });
-        } catch (e) {
-          this.tasks[taskIndex].status = oldStatus;
-          console.error('Error updating status:', e);
+        const response = await boardsApi.updateTask(boardId, taskId, {
+          status: newStatus
+        });
+
+        if (response) {
+          Object.assign(task, response);
         }
+
+        const notifStore = useNotificationStore();
+        notifStore.addNotification({
+          type: 'success',
+          message: `Задача перемещена в ${newStatus}`
+        });
+      } catch (e) {
+        console.error('Error updating task status:', e);
+        throw e;
       }
     }
   }

@@ -18,7 +18,7 @@
             <AlertTitle>Ошибка</AlertTitle>
             <AlertDescription>{{ errorMessage }}</AlertDescription>
           </Alert>
-          <Button type="submit" class="w-full" :disabled="loading">
+          <Button type="submit" class="w-full cursor-pointer" :disabled="loading">
             <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
             {{ loading ? 'Вход...' : 'Войти' }}
           </Button>
@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,12 +50,14 @@ const form = reactive({ email: '', password: '' });
 const loading = ref(false);
 const errorMessage = ref('');
 
+const router = useRouter();
+
 const handleLogin = async () => {
   loading.value = true;
   errorMessage.value = '';
   try {
     await authStore.login(form);
-    navigateTo('/dashboard');
+    await router.push('/dashboard');
   } catch (error: any) {
     errorMessage.value = error.message || 'Не удалось войти';
   } finally {

@@ -39,7 +39,7 @@ func NewServer(cfg Config, logger *logrus.Logger) *Server {
 		engine.Use(cors.New(cors.Config{
 			AllowOrigins:     cfg.CorsOrigins,
 			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Auth orization"},
+			AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 			ExposeHeaders:    []string{"Content-Length"},
 			AllowCredentials: true,
 			MaxAge:           12 * time.Hour,

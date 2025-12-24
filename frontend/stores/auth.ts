@@ -29,15 +29,23 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials: { email: string; password: string }) {
       this.loading = true;
       try {
-        const data = await authApi.login(credentials);
-        this.setToken(data.access_token);
-        this.setUser({
-          email: credentials.email,
-          username: credentials.email.split('@')[0],
-        });
+        const response = await authApi.login(credentials);
+        if (response.access_token) {
+          this.setToken(response.access_token);
+        }
+
+        if (response.user) {
+          this.setUser(response.user);
+        } else {
+          this.setUser({
+            email: credentials.email,
+            username: credentials.email.split('@')[0] || credentials.email,
+          });
+        }
+
         return true;
       } catch (error: any) {
-        throw new Error(error.message);
+        throw new Error(error.message || 'Ошибка входа');
       } finally {
         this.loading = false;
       }
@@ -45,10 +53,18 @@ export const useAuthStore = defineStore('auth', {
     async register(form: { username: string; firstname: string; lastname: string; email: string; password: string }) {
       this.loading = true;
       try {
-        await authApi.register(form);
-        await this.login({ email: form.email, password: form.password });
+        const response = await authApi.register(form);
+        if (response.access_token) {
+          this.setToken(response.access_token);
+          if (response.user) {
+            this.setUser(response.user);
+          }
+        } else {
+          await this.login({ email: form.email, password: form.password });
+        }
+        return true;
       } catch (error: any) {
-        throw new Error(error.message);
+        throw new Error(error.message || 'Ошибка регистрации');
       } finally {
         this.loading = false;
       }

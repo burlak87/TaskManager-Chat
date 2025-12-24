@@ -99,7 +99,7 @@ func (s *User) UserRegister(user domain.User) (domain.User, error) {
 	return createdUser, nil
 }
 
-func (s *User) StudentsLogin(user domain.User) (domain.TokenResponse, domain.TwoFaCodes, error) {
+func (s *User) UserLogin(user domain.User) (domain.TokenResponse, domain.TwoFaCodes, error) {
     fmt.Printf("DEBUG LOGIN: Attempting login for email: '%s'\n", user.Email)
     fmt.Printf("DEBUG LOGIN: Password provided: '%s'\n", user.Password)
     fmt.Printf("DEBUG LOGIN: TwoFA enabled: '%v'\n", user.TwoFAEnabled)
@@ -181,7 +181,7 @@ func (s *User) StudentsLogin(user domain.User) (domain.TokenResponse, domain.Two
     return domain.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken}, domain.TwoFaCodes{}, nil
 }
 
-func (s *User) StudentsRefresh(refreshToken string) (domain.TokenResponse, error) {
+func (s *User) UserRefresh(refreshToken string) (domain.TokenResponse, error) {
 	userID, err := s.storage.RefreshGet(refreshToken)
 	if err != nil {
 		return  domain.TokenResponse{}, errors.New("Invalid refresh token")
@@ -301,7 +301,7 @@ func (s *User) BlockUser(email string) {
 	}
 }
 
-func (s *User) StudentsSendEmailCode(tempToken string) error {
+func (s *User) UserSendEmailCode(tempToken string) error {
 	userID, err := s.extractUserIDFromToken(tempToken)
 	if err != nil {
 		return errors.New("Invalid temp token")

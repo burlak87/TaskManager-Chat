@@ -46,7 +46,7 @@ func (s *Storage) InsertUser(user domain.User) (int64, error) {
 	return createdUser.ID, nil
 }
 
-func (s *Storage) SelectUsers(email string) (domain.User, error) {
+func (s *Storage) SelectUser(email string) (domain.User, error) {
 	user, err := s.queries.GetUserByEmail(context.Background(), email)
 	if err != nil {
 		return domain.User{}, err

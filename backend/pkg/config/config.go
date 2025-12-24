@@ -47,7 +47,7 @@ func GetConfig() *Config {
 			logger.Warnf("Config file not found, using env vars: %v", err)
 		}
 
-		logger.Infof("Database config: %s:%s", instance.Host, instance.Port)
+		logger.Infof("Database config: %s:%s", instance.StorageConfig.Host, instance.StorageConfig.Port)
 	})
 	return instance
 }
