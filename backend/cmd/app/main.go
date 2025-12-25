@@ -13,10 +13,13 @@ import (
 	"github.com/your-team/taskmanager-chat/backend/internal/websocket"
 	mongodbclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/mongodb"
 	postgresqlclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/postgresql"
+	"github.com/your-team/taskmanager-chat/backend/pkg/clinet/postgresql"
 	"github.com/your-team/taskmanager-chat/backend/pkg/config"
 	"github.com/your-team/taskmanager-chat/backend/pkg/logging"
 	"github.com/your-team/taskmanager-chat/backend/pkg/middleware"
 	"github.com/your-team/taskmanager-chat/backend/pkg/server"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
