@@ -34,6 +34,10 @@ type Querier interface {
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
 	UpdateTwoFAStatus(ctx context.Context, arg UpdateTwoFAStatusParams) error
 	UpdateTwoFaCodeAttempts(ctx context.Context, arg UpdateTwoFaCodeAttemptsParams) error
+	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
+	GetNotificationsByUserID(ctx context.Context, userID int64) ([]Notification, error)
+	MarkNotificationAsRead(ctx context.Context, arg MarkNotificationAsReadParams) error
+	GetUnreadNotificationsCount(ctx context.Context, arg GetUnreadNotificationsCountParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)
