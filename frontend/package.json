@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@nuxt/ui": "^2.13.0",
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/core": "^14.1.0",
@@ -30,17 +29,4 @@
     "@vueuse/nuxt": "^14.1.0",
     "prettier": "^3.7.4",
     "typescript": "^5.3.3"
-=======
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "socket.io-client": "^4.7.2"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.0.0",
-    "typescript": "^5.0.0",
-    "vite": "^4.4.0"
->>>>>>> b7e8e35e5db107e93cf581f8bc4ee92ab3915aa6
-  }
-}
+  }}
