@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/your-team/taskmanager-chat/backend/internal/adapters/rest"
+	"github.com/your-team/taskmanager-chat/backend/internal/handler"
 	"github.com/your-team/taskmanager-chat/backend/internal/service"
 	mongodbstorage "github.com/your-team/taskmanager-chat/backend/internal/storage/mongodb"
 	"github.com/your-team/taskmanager-chat/backend/internal/storage/psql"
@@ -82,10 +83,12 @@ func main() {
 	userService := service.NewUser(storage, jwtSecret)
 
 	userHandler := rest.NewUsersHandler(userService, logger)
+	boardService := service.NewBoardService(storage)
+	boardHandler := handler.NewBoardHandler(boardService)
 	
 	wsHub := websocket.NewHub(messageStorage, logger.Logger)
 	go wsHub.Run()
-	
+
 	wsHandler := websocket.NewHandler(wsHub, logger.Logger)
 
 	serverCfg := server.Config{
@@ -104,13 +107,20 @@ func main() {
 		{
 			userHandler.RegisterRoutes(api, jwtSecret)
 
+			protected := api.Group("")
+			protected.Use(middleware.JWTAuthMiddleware(jwtSecret))
+			{
+				boardHandler.RegisterRoutes(protected)
+				userHandler.RegisterProfileRoute(protected)
+			}
+
 			ws := api.Group("/ws")
 			ws.Use(middleware.JWTAuthMiddleware(jwtSecret))
 			{
 				ws.GET("/chat", wsHandler.HandleWebSocket)
 			}
 		}
-		
+
 		engine.GET("/health", func(c *gin.Context) {
 			c.JSON(200, gin.H{
 				"status": "ok",

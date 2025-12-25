@@ -36,7 +36,12 @@
         class="min-w-[280px] w-[280px] bg-gray-100 rounded-md flex flex-col max-h-full"
       >
         <div class="p-3 font-semibold text-gray-700 flex justify-between border-b border-gray-200">
-          {{ col.title }}
+          <div class="flex items-center gap-2">
+            <span>{{ col.title }}</span>
+            <Button variant="ghost" size="sm" class="h-6 w-6 p-0" @click="startEditingColumn(col)">
+              <Pencil class="h-3 w-3" />
+            </Button>
+          </div>
           <span class="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full">
             {{ boardStore.tasks.filter(t => t.status === col.id).length }}
           </span>
@@ -46,15 +51,18 @@
           <div
             v-for="task in boardStore.tasks.filter(t => t.status === col.id)"
             :key="task.id"
-            class="bg-white p-3 rounded shadow-sm border border-gray-200 text-sm group"
+            class="bg-white p-3 rounded shadow-sm border border-gray-200 text-sm group relative"
           >
             <div class="font-medium">{{ task.title }}</div>
             <div class="text-gray-500 mt-1 truncate">{{ task.description }}</div>
-            <div v-if="task.assignee" class="mt-2 flex items-center gap-1 text-xs text-gray-400">
-              <div class="w-4 h-4 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold">
-                {{ task.assignee?.[0]?.toUpperCase() }}
-              </div>
-              {{ task.assignee }}
+
+            <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="sm" class="h-6 w-6 p-0" @click="startEditingTask(task)">
+                <Pencil class="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="sm" class="h-6 w-6 p-0 text-red-500 hover:text-red-700" @click="deleteTask(task.id)">
+                <Trash class="h-3 w-3" />
+              </Button>
             </div>
           </div>
 
@@ -63,6 +71,10 @@
           </Button>
         </div>
       </div>
+
+      <Button variant="outline" size="sm" class="h-12" @click="showColumnModal = true">
+        + Добавить колонку
+      </Button>
     </div>
 
     <div v-else class="flex-1 flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -122,6 +134,46 @@
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog v-model:open="showColumnModal">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ editingColumn ? 'Редактировать колонку' : 'Новая колонка' }}</DialogTitle>
+        </DialogHeader>
+        <div class="grid gap-4 py-4">
+          <div class="space-y-2">
+            <Label>Название</Label>
+            <Input v-model="newColumn.title" placeholder="Название колонки" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showColumnModal = false">Отмена</Button>
+          <Button @click="saveColumn">Сохранить</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="showTaskEditModal">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Редактировать задачу</DialogTitle>
+        </DialogHeader>
+        <div class="grid gap-4 py-4">
+          <div class="space-y-2">
+            <Label>Заголовок</Label>
+            <Input v-model="taskEdit.title" placeholder="Заголовок задачи" />
+          </div>
+          <div class="space-y-2">
+            <Label>Описание</Label>
+            <Textarea v-model="taskEdit.description" placeholder="Описание задачи..." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showTaskEditModal = false">Отмена</Button>
+          <Button @click="saveTask">Сохранить</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
@@ -131,6 +183,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { useBoardStore } from '~/stores/board';
 import { useNotificationStore } from '~/stores/notification';
+import type { Column } from '~/stores/board';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -142,7 +195,7 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { ArrowLeft, Send, Loader2 } from 'lucide-vue-next';
+import { ArrowLeft, Send, Loader2, Pencil, Trash } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -166,8 +219,19 @@ const messagesContainer = ref<HTMLElement | null>(null);
 let socket: WebSocket | null = null;
 
 const showTaskModal = ref(false);
+const showColumnModal = ref(false);
+const showTaskEditModal = ref(false);
 const currentColumnId = ref('');
+const editingColumn = ref<Column | null>(null);
+const editingTask = ref<Task | null>(null);
 const newTask = reactive({
+  title: '',
+  description: ''
+});
+const newColumn = reactive({
+  title: ''
+});
+const taskEdit = reactive({
   title: '',
   description: ''
 });
@@ -270,6 +334,7 @@ watch(currentTab, (newTab) => {
 
 onMounted(async () => {
   if (boardId.value) {
+    await boardStore.fetchColumns(boardId.value);
     await boardStore.fetchTasks(boardId.value);
   }
 });
@@ -294,12 +359,81 @@ const addTask = async () => {
     await boardStore.addTask({
       title: newTask.title,
       description: newTask.description,
-      status: currentColumnId.value,
+      column_id: parseInt(currentColumnId.value),
       boardId: boardId.value
     });
     showTaskModal.value = false;
   } catch (e) {
     console.error('Ошибка создания задачи:', e);
+  }
+};
+
+const startEditingColumn = async (column: Column) => {
+  editingColumn.value = column;
+  newColumn.title = column.title;
+  showColumnModal.value = true;
+};
+
+const saveColumn = async () => {
+  if (!newColumn.title.trim()) return;
+
+  try {
+    if (editingColumn.value) {
+      await boardStore.updateColumn(boardId.value, editingColumn.value.id, newColumn.title);
+    } else {
+      await boardStore.addColumn(boardId.value, newColumn.title);
+    }
+    showColumnModal.value = false;
+    newColumn.title = '';
+    editingColumn.value = null;
+  } catch (e) {
+    console.error('Ошибка сохранения колонки:', e);
+  }
+};
+
+const deleteColumn = async (columnId: string) => {
+  if (confirm('Вы уверены, что хотите удалить эту колонку? Все задачи в этой колонке будут перемещены.')) {
+    try {
+      await boardStore.deleteColumn(boardId.value, columnId);
+    } catch (e) {
+      console.error('Ошибка удаления колонки:', e);
+    }
+  }
+};
+
+const startEditingTask = (task: Task) => {
+  editingTask.value = task;
+  taskEdit.title = task.title;
+  taskEdit.description = task.description || '';
+  showTaskEditModal.value = true;
+};
+
+const saveTask = async () => {
+  if (!editingTask.value) return;
+
+  try {
+    await boardStore.updateTask(
+      editingTask.value.id,
+      boardId.value,
+      {
+        title: taskEdit.title,
+        description: taskEdit.description
+      }
+    );
+    showTaskEditModal.value = false;
+    editingTask.value = null;
+  } catch (e) {
+    console.error('Ошибка сохранения задачи:', e);
+  }
+};
+
+const deleteTask = async (taskId: string) => {
+  if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
+    try {
+      await boardStore.deleteTask(taskId, boardId.value);
+    } catch (e) {
+      console.error('Ошибка удаления задачи:', e);
+    }
   }
 };
 </script>

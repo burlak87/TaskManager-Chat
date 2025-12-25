@@ -52,13 +52,13 @@
               <div class="text-sm font-medium">{{ auth.user?.username || 'User' }}</div>
               <div class="text-xs text-gray-500">{{ auth.user?.email }}</div>
             </div>
-            <Button variant="ghost" size="sm" @click="handleLogout" class="text-red-600 hover:bg-red-50">
+            <Button variant="ghost" size="sm" @click="handleLogout" class="text-red-600 hover:bg-red-50 cursor-pointer">
               Выйти
             </Button>
           </div>
           <div v-else>
             <NuxtLink to="/auth/login">
-              <Button size="sm">Войти</Button>
+              <Button class="cursor-pointer" size="sm">Войти</Button>
             </NuxtLink>
           </div>
         </div>
@@ -95,9 +95,11 @@ import { Bell, LayoutGrid } from 'lucide-vue-next';
 
 const auth = useAuthStore();
 const notification = useNotificationStore();
+const router = useRouter();
 
 const handleLogout = () => {
   auth.logout();
+  router.push('/auth/login');
 };
 
 const formatDate = (date: Date) => {

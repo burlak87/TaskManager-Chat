@@ -12,18 +12,30 @@ import (
 
 type Querier interface {
 	BlockUser(ctx context.Context, arg BlockUserParams) error
+	CreateBoard(ctx context.Context, arg CreateBoardParams) (Board, error)
+	CreateColumn(ctx context.Context, arg CreateColumnParams) (Column, error)
 	CreateLoginAttempt(ctx context.Context, arg CreateLoginAttemptParams) error
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error
+	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateTwoFaCode(ctx context.Context, arg CreateTwoFaCodeParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteBoard(ctx context.Context, id int64) error
+	DeleteColumn(ctx context.Context, id int64) error
 	DeleteExpiredRefreshTokens(ctx context.Context) error
 	DeleteRefreshToken(ctx context.Context, token string) error
+	DeleteTask(ctx context.Context, id int64) error
 	GetBlockedStatus(ctx context.Context, email string) (pgtype.Timestamptz, error)
+	GetBoardByID(ctx context.Context, id int64) (Board, error)
+	GetBoardsByOwner(ctx context.Context, ownerID int64) ([]Board, error)
+	GetColumnByID(ctx context.Context, id int64) (Column, error)
+	GetColumnsByBoardID(ctx context.Context, boardID int64) ([]Column, error)
 	GetFailedLogAttempts(ctx context.Context, arg GetFailedLogAttemptsParams) (int64, error)
 	GetRecentCodeRequests(ctx context.Context, arg GetRecentCodeRequestsParams) (int64, error)
 	GetRecentFailedAttempts(ctx context.Context, arg GetRecentFailedAttemptsParams) (int64, error)
 	GetRecentVerificationAttempts(ctx context.Context, arg GetRecentVerificationAttemptsParams) (int64, error)
 	GetRefreshToken(ctx context.Context, token string) (GetRefreshTokenRow, error)
+	GetTaskByID(ctx context.Context, id int64) (Task, error)
+	GetTasksByBoardID(ctx context.Context, boardID int64) ([]Task, error)
 	GetTwoFaCodeByUserID(ctx context.Context, userID int64) (TwoFaCode, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
@@ -31,7 +43,10 @@ type Querier interface {
 	RefreshDeleteByUserI(ctx context.Context, userID int64) error
 	RefreshDeleteByUserID(ctx context.Context, userID int64) error
 	ResetFailedAttempts(ctx context.Context, email string) error
+	UpdateBoard(ctx context.Context, arg UpdateBoardParams) (Board, error)
+	UpdateColumn(ctx context.Context, arg UpdateColumnParams) (Column, error)
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
+	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateTwoFAStatus(ctx context.Context, arg UpdateTwoFAStatusParams) error
 	UpdateTwoFaCodeAttempts(ctx context.Context, arg UpdateTwoFaCodeAttemptsParams) error
 }

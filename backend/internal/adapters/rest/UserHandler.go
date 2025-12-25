@@ -2,6 +2,7 @@ package rest
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -18,6 +19,7 @@ type UserService interface {
 	VerifyCode(code domain.Code) (domain.TokenResponse, error)
 	EnableTwoFA(userID int64) error
 	DisableTwoFA(userID int64, passqord string) error
+	GetUserByID(userID int64) (domain.User, error)
 }
 
 type UsersHandler struct {
@@ -45,16 +47,20 @@ func (h *UsersHandler) RegisterRoutes(router *gin.RouterGroup, jwtSecret string)
 	}
 }
 
+func (h *UsersHandler) RegisterProfileRoute(router *gin.RouterGroup) {
+	router.GET("/profile", h.getProfile)
+}
+
 func (h *UsersHandler) signUp(c *gin.Context) {
 	var user domain.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		h.logger.Error("Failed to bind JSON: " + err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error": "Неверный формат запроса",
 		})
 		return
 	}
-	
+
 	createdUser, err := h.service.UserRegister(user)
 	if err != nil {
 		h.logger.Error("Failed to register user: " + err.Error())
@@ -62,14 +68,48 @@ func (h *UsersHandler) signUp(c *gin.Context) {
 		if ok {
 			c.JSON(http.StatusBadRequest, appErr)
 		} else {
+			errorMsg := "Ошибка регистрации"
+			if strings.Contains(err.Error(), "already exists") || strings.Contains(err.Error(), "пользователь с таким") {
+				if strings.Contains(err.Error(), "email") {
+					errorMsg = "Пользователь с таким email уже существует"
+				} else if strings.Contains(err.Error(), "username") || strings.Contains(err.Error(), "именем") {
+					errorMsg = "Пользователь с таким именем уже существует"
+				} else {
+					errorMsg = err.Error()
+				}
+			} else if strings.Contains(err.Error(), "all fields are required") {
+				errorMsg = "Все поля обязательны для заполнения"
+			} else if strings.Contains(err.Error(), "password must") {
+				errorMsg = err.Error()
+			} else if strings.Contains(err.Error(), "must contain letters, digits and special characters") {
+				errorMsg = "Пароль должен содержать буквы, цифры и специальные символы"
+			}
+
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Failed to register user",
+				"error": errorMsg,
 			})
 		}
 		return
 	}
-	
-	c.JSON(http.StatusCreated, createdUser)
+
+	loginUser := domain.User{
+		Email:    user.Email,
+		Password: user.Password,
+	}
+
+	accessToken, tempToken, err := h.service.UserLogin(loginUser)
+	if err != nil {
+		h.logger.Error("Failed to login user after registration: " + err.Error())
+		c.JSON(http.StatusCreated, createdUser)
+		return
+	}
+
+	if tempToken.RequiresTwoFa {
+		c.JSON(http.StatusOK, tempToken)
+		return
+	}
+
+	c.JSON(http.StatusOK, accessToken)
 }
 
 func (h *UsersHandler) signIn(c *gin.Context) {
@@ -77,11 +117,11 @@ func (h *UsersHandler) signIn(c *gin.Context) {
 	if err := c.ShouldBindJSON(&user); err != nil {
 		h.logger.Error("Failed to bind JSON: " + err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request body",
+			"error": "Неверный формат запроса",
 		})
 		return
 	}
-	
+
 	accessToken, tempToken, err := h.service.UserLogin(user)
 	if err != nil {
 		h.logger.Error("Failed to login user: " + err.Error())
@@ -89,18 +129,27 @@ func (h *UsersHandler) signIn(c *gin.Context) {
 		if ok {
 			c.JSON(http.StatusUnauthorized, appErr)
 		} else {
+			errorMsg := "Ошибка аутентификации"
+			if strings.Contains(err.Error(), "invalid credentials") {
+				errorMsg = "Неверный email или пароль"
+			} else if strings.Contains(err.Error(), "account is blocked") {
+				errorMsg = err.Error()
+			} else if strings.Contains(err.Error(), "Too many failed attempts") {
+				errorMsg = "Слишком много неудачных попыток входа, аккаунт заблокирован"
+			}
+
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication failed",
+				"error": errorMsg,
 			})
 		}
 		return
 	}
-	
+
 	if tempToken.RequiresTwoFa {
 		c.JSON(http.StatusOK, tempToken)
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, accessToken)
 }
 
@@ -226,8 +275,37 @@ func (h *UsersHandler) disableTwoFA(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
+	})
+}
+
+func (h *UsersHandler) getProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	userIDInt64 := userID.(int64)
+
+	user, err := h.service.GetUserByID(userIDInt64)
+	if err != nil {
+		h.logger.Error("Failed to get user profile: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get user profile",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+		"firstname": user.Firstname,
+		"lastname": user.Lastname,
 	})
 }

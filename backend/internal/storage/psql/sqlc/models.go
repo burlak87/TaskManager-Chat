@@ -49,3 +49,72 @@ type User struct {
 	FailedAttempts    pgtype.Int4        `json:"failed_attempts"`
 	LastFailedAttempt pgtype.Timestamptz `json:"last_failed_attempt"`
 }
+
+type Board struct {
+	ID          int64              `json:"id"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	OwnerID     int64              `json:"owner_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Column struct {
+	ID        int64              `json:"id"`
+	BoardID   int64              `json:"board_id"`
+	Title     string             `json:"title"`
+	Position  int32              `json:"position"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Task struct {
+	ID          int64              `json:"id"`
+	BoardID     int64              `json:"board_id"`
+	ColumnID    int64              `json:"column_id"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	Position    pgtype.Int4        `json:"position"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CreateBoardParams struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	OwnerID     int64  `json:"owner_id"`
+}
+
+type UpdateBoardParams struct {
+	ID          int64   `json:"id"`
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+}
+
+type CreateColumnParams struct {
+	BoardID  int64 `json:"board_id"`
+	Title    string `json:"title"`
+	Position int32  `json:"position"`
+}
+
+type UpdateColumnParams struct {
+	ID       int64   `json:"id"`
+	Title    *string `json:"title"`
+	Position *int32  `json:"position"`
+}
+
+type CreateTaskParams struct {
+	BoardID     int64             `json:"board_id"`
+	ColumnID    *int64            `json:"column_id"`
+	Title       string            `json:"title"`
+	Description string            `json:"description"`
+	Position    *int32            `json:"position"`
+}
+
+type UpdateTaskParams struct {
+	ID          int64             `json:"id"`
+	Title       *string           `json:"title"`
+	Description *string           `json:"description"`
+	ColumnID    *int64            `json:"column_id"`
+	Position    *int32            `json:"position"`
+}

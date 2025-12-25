@@ -48,19 +48,23 @@ func (s *User) UserRegister(user domain.User) (domain.User, error) {
 	fmt.Printf("DEBUG SERVICE REGISTER: Starting registration for: %s\n", user.Email)
 	
 	if user.Username == "" || user.Firstname == "" || user.Lastname == "" || user.Email == "" {
-		return domain.User{}, errors.New("Invalid input: all fields are required")
+		return domain.User{}, errors.New("Неверный ввод: все поля обязательны")
 	}
-	
+
+	if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(user.Username) {
+		return domain.User{}, errors.New("Имя пользователя должно содержать только латинские буквы, цифры и символ подчеркивания")
+	}
+
 	if user.Password == "" || len(user.Password) < 8 {
-		return domain.User{}, errors.New("Invalid password input: password must br at least 8 characters")
+		return domain.User{}, errors.New("Неверный ввод пароля: пароль должен содержать не менее 8 символов")
 	}
-	
+
 	hasLetters, _ := regexp.MatchString(`[a-zA-Zа-яА-Я]`, user.Password)
 	hasDigits, _ := regexp.MatchString(`[0-9]`, user.Password)
 	hasSpecial, _ := regexp.MatchString(`[^a-zA-Zа-яА-Я0-9\s]`, user.Password)
-	
+
 	if !hasLetters || !hasDigits || !hasSpecial {
-		return domain.User{}, errors.New("Invalid password input: password must contain letters, digits and special characters")
+		return domain.User{}, errors.New("Неверный ввод пароля: пароль должен содержать буквы, цифры и специальные символы")
 	}
 	
 	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -250,7 +254,11 @@ func (s *User) IsUserBlocked(email string) (bool, int64, error) {
 		if !ok {
 			return false, 0, errors.New("invalid format for blocked_until")
 		}
-	
+
+		if blockedUntilStr == "" {
+			return false, 0, nil
+		}
+
 		blockedUntil, err := time.Parse(time.RFC3339, blockedUntilStr)
 		if err != nil {
 			return false, 0, err
@@ -451,4 +459,8 @@ func (s *User) extractUserIDFromToken(tokenString string) (int64, error) {
 	}
 	
 	return int64(userIDFloat), nil
+}
+
+func (s *User) GetUserByID(userID int64) (domain.User, error) {
+	return s.storage.SelectUserByID(userID)
 }

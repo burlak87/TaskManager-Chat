@@ -4,7 +4,7 @@
       <h1 class="text-3xl font-bold">Ваши проекты</h1>
       <Dialog v-model:open="showCreateDialog">
         <DialogTrigger as-child>
-          <Button>
+          <Button class="cursor-pointer">
             <Plus class="mr-2 h-4 w-4" /> Новый проект
           </Button>
         </DialogTrigger>
@@ -19,6 +19,10 @@
             <div class="grid grid-cols-4 items-center gap-4">
               <Label for="title" class="text-right">Название</Label>
               <Input id="title" v-model="newBoardTitle" class="col-span-3" />
+            </div>
+            <div class="grid grid-cols-4 items-center gap-4">
+              <Label for="description" class="text-right">Описание</Label>
+              <Textarea id="description" v-model="newBoardDescription" class="col-span-3" />
             </div>
           </div>
           <DialogFooter>
@@ -62,6 +66,7 @@ import { useBoardStore } from '~/stores/board';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogTrigger,
@@ -77,17 +82,21 @@ const boardStore = useBoardStore();
 
 const showCreateDialog = ref(false);
 const newBoardTitle = ref('');
+const newBoardDescription = ref('');
 
 onMounted(() => {
-  boardStore.fetchBoards();
+  if (import.meta.client) {
+    boardStore.fetchBoards();
+  }
 });
 
 const createBoard = async () => {
   if (!newBoardTitle.value.trim()) return;
-  
+
   try {
-    await boardStore.createBoard(newBoardTitle.value);
+    await boardStore.createBoard(newBoardTitle.value, newBoardDescription.value);
     newBoardTitle.value = '';
+    newBoardDescription.value = '';
     showCreateDialog.value = false;
   } catch (e) {
     console.error('Error creating board:', e);

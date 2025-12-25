@@ -30,3 +30,141 @@ func (q *Queries) WithTx(tx pgx.Tx) *Queries {
 		db: tx,
 	}
 }
+
+func (q *Queries) CreateBoard(ctx context.Context, arg CreateBoardParams) (Board, error) {
+	row := q.db.QueryRow(ctx, "INSERT INTO boards (title, description, owner_id) VALUES ($1, $2, $3) RETURNING id, title, description, owner_id, created_at, updated_at", arg.Title, arg.Description, arg.OwnerID)
+	var i Board
+	err := row.Scan(&i.ID, &i.Title, &i.Description, &i.OwnerID, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) GetBoardByID(ctx context.Context, id int64) (Board, error) {
+	row := q.db.QueryRow(ctx, "SELECT id, title, description, owner_id, created_at, updated_at FROM boards WHERE id = $1", id)
+	var i Board
+	err := row.Scan(&i.ID, &i.Title, &i.Description, &i.OwnerID, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) GetBoardsByOwner(ctx context.Context, ownerID int64) ([]Board, error) {
+	rows, err := q.db.Query(ctx, "SELECT id, title, description, owner_id, created_at, updated_at FROM boards WHERE owner_id = $1 ORDER BY created_at DESC", ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Board
+	for rows.Next() {
+		var i Board
+		if err := rows.Scan(&i.ID, &i.Title, &i.Description, &i.OwnerID, &i.CreatedAt, &i.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (q *Queries) UpdateBoard(ctx context.Context, arg UpdateBoardParams) (Board, error) {
+	row := q.db.QueryRow(ctx, "UPDATE boards SET title = COALESCE($2, title), description = COALESCE($3, description), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, title, description, owner_id, created_at, updated_at", arg.ID, arg.Title, arg.Description)
+	var i Board
+	err := row.Scan(&i.ID, &i.Title, &i.Description, &i.OwnerID, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) DeleteBoard(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, "DELETE FROM boards WHERE id = $1", id)
+	return err
+}
+
+func (q *Queries) CreateColumn(ctx context.Context, arg CreateColumnParams) (Column, error) {
+	row := q.db.QueryRow(ctx, "INSERT INTO columns (board_id, title, position) VALUES ($1, $2, $3) RETURNING id, board_id, title, position, created_at, updated_at", arg.BoardID, arg.Title, arg.Position)
+	var i Column
+	err := row.Scan(&i.ID, &i.BoardID, &i.Title, &i.Position, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) GetColumnByID(ctx context.Context, id int64) (Column, error) {
+	row := q.db.QueryRow(ctx, "SELECT id, board_id, title, position, created_at, updated_at FROM columns WHERE id = $1", id)
+	var i Column
+	err := row.Scan(&i.ID, &i.BoardID, &i.Title, &i.Position, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) GetColumnsByBoardID(ctx context.Context, boardID int64) ([]Column, error) {
+	rows, err := q.db.Query(ctx, "SELECT id, board_id, title, position, created_at, updated_at FROM columns WHERE board_id = $1 ORDER BY position", boardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Column
+	for rows.Next() {
+		var i Column
+		if err := rows.Scan(&i.ID, &i.BoardID, &i.Title, &i.Position, &i.CreatedAt, &i.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (q *Queries) UpdateColumn(ctx context.Context, arg UpdateColumnParams) (Column, error) {
+	row := q.db.QueryRow(ctx, "UPDATE columns SET title = COALESCE($2, title), position = COALESCE($3, position), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, board_id, title, position, created_at, updated_at", arg.ID, arg.Title, arg.Position)
+	var i Column
+	err := row.Scan(&i.ID, &i.BoardID, &i.Title, &i.Position, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) DeleteColumn(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, "DELETE FROM columns WHERE id = $1", id)
+	return err
+}
+
+func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, "INSERT INTO tasks (board_id, column_id, title, description, position) VALUES ($1, $2, $3, $4, $5) RETURNING id, board_id, column_id, title, description, position, created_at, updated_at", arg.BoardID, arg.ColumnID, arg.Title, arg.Description, arg.Position)
+	var i Task
+	err := row.Scan(&i.ID, &i.BoardID, &i.ColumnID, &i.Title, &i.Description, &i.Position, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) GetTaskByID(ctx context.Context, id int64) (Task, error) {
+	row := q.db.QueryRow(ctx, "SELECT id, board_id, column_id, title, description, position, created_at, updated_at FROM tasks WHERE id = $1", id)
+	var i Task
+	err := row.Scan(&i.ID, &i.BoardID, &i.ColumnID, &i.Title, &i.Description, &i.Position, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) GetTasksByBoardID(ctx context.Context, boardID int64) ([]Task, error) {
+	rows, err := q.db.Query(ctx, "SELECT id, board_id, column_id, title, description, position, created_at, updated_at FROM tasks WHERE board_id = $1 ORDER BY position", boardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(&i.ID, &i.BoardID, &i.ColumnID, &i.Title, &i.Description, &i.Position, &i.CreatedAt, &i.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, "UPDATE tasks SET title = COALESCE($2, title), description = COALESCE($3, description), column_id = COALESCE($4, column_id), position = COALESCE($5, position), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, board_id, column_id, title, description, position, created_at, updated_at", arg.ID, arg.Title, arg.Description, arg.ColumnID, arg.Position)
+	var i Task
+	err := row.Scan(&i.ID, &i.BoardID, &i.ColumnID, &i.Title, &i.Description, &i.Position, &i.CreatedAt, &i.UpdatedAt)
+	return i, err
+}
+
+func (q *Queries) DeleteTask(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, "DELETE FROM tasks WHERE id = $1", id)
+	return err
+}

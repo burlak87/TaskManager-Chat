@@ -25,8 +25,8 @@ func JWTAuthMiddleware(secret string) gin.HandlerFunc {
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secret), nil
 		})
-		
-		if err != nil || token.Valid {
+
+		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "Invalid or expired token",
 			})
@@ -42,6 +42,7 @@ func JWTAuthMiddleware(secret string) gin.HandlerFunc {
 		}
 		
 		userID := int64(claims["user_id"].(float64))
+		c.Set("user_id", userID)
 		c.Set("userID", userID)
 		c.Set("token", tokenString)
 		

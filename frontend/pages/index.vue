@@ -10,12 +10,13 @@ import { useAuthStore } from '~/stores/auth';
 
 const authStore = useAuthStore();
 
-onMounted(() => {
+onMounted(async () => {
   if (import.meta.client) {
+    await new Promise(resolve => setTimeout(resolve, 0));
     if (authStore.isAuthenticated) {
-      navigateTo('/dashboard');
+      await navigateTo('/dashboard');
     } else {
-      navigateTo('/auth/login');
+      await navigateTo('/auth/login');
     }
   }
 });

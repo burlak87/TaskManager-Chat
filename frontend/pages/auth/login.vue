@@ -52,7 +52,29 @@ const errorMessage = ref('');
 
 const router = useRouter();
 
+const validateForm = (): string | null => {
+  if (!form.email.trim()) {
+    return 'Email обязателен';
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    return 'Некорректный формат email';
+  }
+  if (!form.password) {
+    return 'Пароль обязателен';
+  }
+  if (form.password.length < 8) {
+    return 'Пароль должен содержать не менее 8 символов';
+  }
+  return null;
+};
+
 const handleLogin = async () => {
+  const validationError = validateForm();
+  if (validationError) {
+    errorMessage.value = validationError;
+    return;
+  }
+
   loading.value = true;
   errorMessage.value = '';
   try {

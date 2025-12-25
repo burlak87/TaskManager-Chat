@@ -41,6 +41,8 @@ export const authApi = {
     api.post('/auth/login', credentials).then(res => res.data),
   register: (data: { username: string; firstname: string; lastname: string; email: string; password: string }) =>
     api.post('/auth/register', data).then(res => res.data),
+  getProfile: () =>
+    api.get('/profile').then(res => res.data),
 };
 
 export const boardsApi = {
@@ -53,11 +55,19 @@ export const boardsApi = {
   deleteBoard: (id: string) =>
     api.delete(`/boards/${id}`).then(res => res.data),
 
+  getColumns: (boardId: string) => api.get(`/boards/${boardId}/columns`).then(res => res.data),
+  createColumn: (boardId: string, data: { title: string; position?: number }) =>
+    api.post(`/boards/${boardId}/columns`, data).then(res => res.data),
+  updateColumn: (boardId: string, columnId: string, data: { title?: string; position?: number }) =>
+    api.put(`/boards/${boardId}/columns/${columnId}`, data).then(res => res.data),
+  deleteColumn: (boardId: string, columnId: string) =>
+    api.delete(`/boards/${boardId}/columns/${columnId}`).then(res => res.data),
+
   getTasks: (boardId: string) =>
     api.get(`/boards/${boardId}/tasks`).then(res => res.data),
-  createTask: (boardId: string, data: { title: string; description?: string; status?: string }) =>
+  createTask: (boardId: string, data: { title: string; description?: string; column_id?: number | string }) =>
     api.post(`/boards/${boardId}/tasks`, data).then(res => res.data),
-  updateTask: (boardId: string, taskId: string, data: { title?: string; description?: string; status?: string }) =>
+  updateTask: (boardId: string, taskId: string, data: { title?: string; description?: string; status?: string; column_id?: number | string }) =>
     api.put(`/boards/${boardId}/tasks/${taskId}`, data).then(res => res.data),
   deleteTask: (boardId: string, taskId: string) =>
     api.delete(`/boards/${boardId}/tasks/${taskId}`).then(res => res.data),

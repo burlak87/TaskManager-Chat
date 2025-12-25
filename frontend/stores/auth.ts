@@ -69,11 +69,25 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false;
       }
     },
+    async fetchProfile() {
+      if (!this.accessToken) {
+        throw new Error('No access token available');
+      }
+
+      try {
+        const profile = await authApi.getProfile();
+        this.setUser(profile);
+        return profile;
+      } catch (error: any) {
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
+    },
+
     logout() {
       this.user = null;
       this.accessToken = null;
       localStorage.removeItem('access_token');
-      navigateTo('/auth/login');
     },
   },
 });
