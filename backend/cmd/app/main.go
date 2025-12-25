@@ -9,16 +9,14 @@ import (
 	"github.com/your-team/taskmanager-chat/backend/internal/service"
 	mongodbstorage "github.com/your-team/taskmanager-chat/backend/internal/storage/mongodb"
 	"github.com/your-team/taskmanager-chat/backend/internal/storage/psql"
+	database "github.com/your-team/taskmanager-chat/backend/internal/storage/psql/sqlc"
 	"github.com/your-team/taskmanager-chat/backend/internal/websocket"
 	mongodbclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/mongodb"
 	postgresqlclient "github.com/your-team/taskmanager-chat/backend/pkg/client-database/postgresql"
-	"github.com/your-team/taskmanager-chat/backend/pkg/client/postgresql"
 	"github.com/your-team/taskmanager-chat/backend/pkg/config"
 	"github.com/your-team/taskmanager-chat/backend/pkg/logging"
 	"github.com/your-team/taskmanager-chat/backend/pkg/middleware"
 	"github.com/your-team/taskmanager-chat/backend/pkg/server"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -31,38 +29,43 @@ func main() {
 	logging.Init()
 	logger := logging.GetLogger()
 	logger.Infoln("Starting application")
-	
+
 	cfg := config.GetConfig()
 	logger.Infof("Environment: %s", cfg.Env)
 	logger.Infof("DB CONFIG: Host=%s, Port=%s, Database=%s, Username=%s", cfg.Host, cfg.Port, cfg.Database, cfg.Username)
-	
+
 	postgresqSQLClient, err := postgresqlclient.NewClient(context.TODO(), 15, cfg.StorageConfig)
 	if err != nil {
-		logger.Fatlg("Failed to connect to database: %v", err)
+		logger.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer postgresqSQLClient.Close()
-	
-	queries := sqlc.New(pgPool)
+	pgPool := postgresqSQLClient
+
+	queries := database.New(pgPool)
 	storage := psql.NewStorage(queries)
-	
+
 	mongoClient, err := mongodbclient.NewClient(context.TODO(), 15, cfg.MongoConfig)
 	if err != nil {
 		logger.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 	defer mongoClient.Disconnect(context.TODO())
-	
+
 	messageStorage := mongodbstorage.NewMessageStorage(mongoClient, cfg.MongoConfig.Database)
-	
+
 	jwtSecret := "my-secret-key"
-	logger.Infof("secret %s", jwtSecret)	
-	
+	logger.Infof("secret %s", jwtSecret)
+
 	userService := service.NewUser(storage, storage, jwtSecret)
+	notificationService := service.NewNotificationService(storage, logger)
 
 	userHandler := rest.NewUsersHandler(userService, logger)
-	
+	notificationHandler := rest.NewNotificationHandler(notificationService, logger)
+
+	go notificationService.StartDeadlineChecker(context.Background())
+
 	wsHub := websocket.NewHub(messageStorage, logger.Logger)
 	go wsHub.Run()
-	
+
 	wsHandler := websocket.NewHandler(wsHub, logger.Logger)
 
 	serverCfg := server.Config{
@@ -73,22 +76,28 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	
+
 	srv := server.NewServer(serverCfg, logger.Logger)
-	
+
 	srv.RegisterRoutes(func(engine *gin.Engine) {
 		api := engine.Group("/api")
 		{
 			auth := api.Group("/auth")
 			userHandler.RegisterRoutes(auth, jwtSecret)
-			
+
+			protected := api.Group("/")
+			protected.Use(middleware.JWTAuthMiddleware(jwtSecret))
+			{
+				notificationHandler.RegisterRoutes(protected)
+			}
+
 			ws := api.Group("/ws")
 			ws.Use(middleware.JWTAuthMiddleware(jwtSecret))
 			{
 				ws.GET("/chat", wsHandler.HandleWebSocket)
 			}
 		}
-		
+
 		engine.GET("/health", func(c *gin.Context) {
 			c.JSON(200, gin.H{
 				"status": "ok",
@@ -96,7 +105,7 @@ func main() {
 			})
 		})
 	})
-	
+
 	if err := srv.Start(); err != nil {
 		logger.Fatalf("Failed to start server: %v", err)
 	}
@@ -105,12 +114,12 @@ func main() {
 func getDSN(cfg *config.Config) string {
 	return "postgresql://" + cfg.Username + ":" + cfg.Password + "@" + cfg.Host + ":" + cfg.Port + "/" + cfg.Database + "?sslmode=disable&pool_max_conns=20"
 }
-	
+
 // postgreSQLClient, err := postgresql.NewClient(context.TODO(), 15, cfg.StorageConfig)
 // 	if err != nil {
 // 		logger.Fatalf("Failed to connect to database: %v", err)
 // 	}
-	
+
 // 	logger.Infoln("Checking available databases...")
 // 	rows, err := postgreSQLClient.Query(context.Background(), "SELECT datname FROM pg_database WHERE datistemplate = false;")
 // 	if err == nil {
@@ -121,7 +130,7 @@ func getDSN(cfg *config.Config) string {
 // 			logger.Infof("Available database: %s", dbName)
 // 		}
 // 	}
-	
+
 // 	logger.Infoln("Checking tables in current database...")
 // 	rows, err = postgreSQLClient.Query(context.Background(),
 // 		"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';")
@@ -133,7 +142,7 @@ func getDSN(cfg *config.Config) string {
 // 			logger.Infof("Table: %s", tableName)
 // 		}
 // 	}
-	
+
 // 	var actualUserCount int
 // 	err = postgreSQLClient.QueryRow(context.Background(), "SELECT COUNT(*) FROM users").Scan(&actualUserCount)
 // 	if err != nil {
